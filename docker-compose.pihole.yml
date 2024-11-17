@@ -1,0 +1,44 @@
+services:
+  cloudflared:
+    image: visibilityspots/cloudflared
+    container_name: cloudflared
+    ports:
+      - "5053:5053/tcp"
+      - "5053:5053/udp"
+    environment:
+      - UPSTREAM1=https://dns.quad9.net/dns-query
+      - TZ=Asia/Jakarta
+      - PORT=5053
+      - ADDRESS=0.0.0.0
+    restart: unless-stopped
+    networks:
+      pihole-dns:
+        ipv4_address: 10.0.0.2
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "8080:80/tcp"
+    environment:
+      - TZ=Asia/Jakarta
+      - PIHOLE_DNS_=10.0.0.2#5053
+    volumes:
+      - "./etc-pihole/:/etc/pihole/"
+      - "./etc-dnsmasq.d/:/etc/dnsmasq.d/"
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - "cloudflared"
+    restart: unless-stopped
+    networks:
+      - pihole-dns
+
+networks:
+  pihole-dns:
+    ipam:
+      config:
+        - subnet: 10.0.0.0/29
